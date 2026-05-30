@@ -77,44 +77,6 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-  bump-dev:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout platform repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.PLATFORM_REPO }}
-          token: ${{ secrets.PLATFORM_REPO_TOKEN }}
-
-      - name: Update image.tag in dev values
-        env:
-          NEW_TAG: ${{ needs.build.outputs.image-tag }}
-        run: |
-          yq -i ".image.tag = strenv(NEW_TAG)" environments/dev/users-service.values.yaml
-          echo "--- Updated file ---"
-          cat environments/dev/users-service.values.yaml
-
-      - name: Create pull request (dev bump, auto-merge)
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.PLATFORM_REPO_TOKEN }}
-          commit-message: "chore(dev): bump users-service to ${{ needs.build.outputs.image-tag }}"
-          branch: bot/bump-users-service-dev-${{ needs.build.outputs.image-tag }}
-          base: main
-          title: "chore(dev): bump users-service → ${{ needs.build.outputs.image-tag }}"
-          body: |
-            Automated bump from `nvim-solutions/emicorp-org-devops-spring-users-service`.
-
-            - Source commit: ${{ github.sha }}
-            - New image: `ghcr.io/${{ env.IMAGE_NAME }}:${{ needs.build.outputs.image-tag }}`
-            - Target environment: **dev**
-          labels: |
-            automated
-            environment:dev
-          delete-branch: true
-
   bump-prod:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
